@@ -1,0 +1,748 @@
+openapi: 3.0.3
+info:
+  title: Онлайн-кинотеатр
+  description: Распределенная система стримингового сервиса
+  version: 0.0.1
+  contact:
+    email: aidarkhalilov4021@mail.ru
+servers:
+  - url: 'http://localhost:8080/api/v1'
+tags:
+  - name: auth
+    description: Функционал регистрации и авторизации пользователя
+  - name: profile
+    description: Функционал управления профилем пользователя
+  - name: catalog
+    description: Функционал управления каталогом медиаконтента
+  - name: recommendation
+    description: Функционал персональных рекомендаций
+  - name: video
+    description: Функционал управления видеоплеером
+
+paths:
+  /auth/signup:
+    post:
+      tags:
+        - auth
+      operationId: signUp
+      summary: Регистрация пользователя
+      description: Зарегистрирорвать нового пользователя в системе с ролью "Пользователь"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRq'
+      responses:
+        '201':
+          description: Сообщение с подтверждением регистрации отправлено на почту
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignUpRs'
+        '400':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/signin:
+    post:
+      tags:
+        - auth
+      operationId: signIn
+      summary: Авторизация пользователя
+      description: Авторизоваться в системе с помощью электронной почты и пароля
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRq'
+      responses:
+        '200':
+          description: Авторизация успешна
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignInRs'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/signout:
+    post:
+      tags:
+        - auth
+      summary: Завершение сессии пользователя
+      operationId: signOut
+      description: Метод для выхода пользователя из системы. Отзывает текущий access токен и удаляет refresh токен.
+      responses:
+        '200':
+          description: Успешный выход из системы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutRs'
+
+        '401':
+          description: Невалидный или отсутствующий токен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth/password/reset:
+    post:
+      tags:
+        - auth
+      summary: Запрос на сброс пароля
+      operationId: resetPassword
+      description: Метод для сброса пароля пользователя
+      requestBody:
+        description: Электронная почта пользователя для сброса пользователя
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRq'
+      responses:
+        '200':
+          description: Успешная отправка ссылки на сброса пароля
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPasswordRs'
+  /profile/{userId}:
+    get:
+      tags:
+        - profile
+      summary: Получение профиля пользователя
+      operationId: getProfile
+      description: Возвращает данные профиля пользователя
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Уникальный идентификатор пользователя
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Профиль найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileRs'
+        '404':
+          description: Профиль не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - profile
+      summary: Редактирование профиля пользователя
+      operationId: updateProfile
+      description: Обновляет данные профиля, такие как имя, дата рождения, пол, аватар.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Уникальный идентификатор пользователя
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileRq'
+      responses:
+        '200':
+          description: Профиль успешно обновлён.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileRs'
+        '400':
+          description: Некорректные данные.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - profile
+      summary: Удаление профиля пользователя
+      operationId: deleteProfile
+      description: Удаляет аккаунт пользователя после подтверждения действия
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Уникальный идентификатор пользователя
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Профиль успешно удалён.
+        '404':
+          description: Профиль не найден.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /profile/{userId}/history:
+    get:
+      tags:
+        - profile
+      summary: Просмотр истории активности
+      operationId: getHistory
+      description: Возвращает историю действий пользователя
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Уникальный идентификатор пользователя
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: История активности
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoryRs'
+        '404':
+          description: Профиль не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - profile
+      summary: Очистка истории активности
+      operationId: deleteHistory
+      description: Удаляет всю историю действий пользователя
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Уникальный идентификатор пользователя
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: История успешно очищена
+        '404':
+          description: Профиль не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /film:
+    get:
+      tags:
+        - catalog
+      summary: Получить список фильмов
+      operationId: getFilms
+      description: Возвращает список фильмов с поддержкой фильтрации и пагинации.
+      parameters:
+        - name: title
+          in: query
+          description: Название фильма для поиска
+          required: false
+          schema:
+            type: string
+        - name: genre
+          in: query
+          description: Идентификатор жанра для фильтрации
+          required: false
+          schema:
+            type: integer
+        - name: rating
+          in: query
+          description: Минимальный рейтинг фильма
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: page
+          in: query
+          description: Номер страницы для пагинации
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          description: Количество элементов на странице
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Список фильмов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FilmRs'
+    post:
+      tags:
+        - catalog
+      summary: Добавить новый фильм
+      operationId: createFilm
+      description: Добавляет новый фильм в каталог. Доступно только администраторам.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilmRq'
+      responses:
+        '201':
+          description: Фильм успешно добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilmRs'
+        '400':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /film/{movieId}:
+    get:
+      tags:
+        - catalog
+      summary: Получить информацию о фильме
+      operationId: getFilm
+      description: Возвращает подробную информацию о фильме по его идентификатору.
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: Уникальный идентификатор фильма
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Подробная информация о фильме
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilmRs'
+        '404':
+          description: Фильм не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - catalog
+      summary: Обновить информацию о фильме
+      operationId: updateFilm
+      description: Обновляет данные фильма по его идентификатору. Доступно только администраторам.
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: Уникальный идентификатор фильма
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilmRq'
+      responses:
+        '200':
+          description: Фильм успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilmRs'
+        '404':
+          description: Фильм не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - catalog
+      summary: Удалить фильм
+      operationId: deleteFilm
+      description: Удаляет фильм по его идентификатору. Доступно только администраторам.
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: Уникальный идентификатор фильма
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Фильм успешно удален
+        '404':
+          description: Фильм не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /recommendation/{userId}:
+    get:
+      tags:
+        - recommendation
+      summary: Получить список рекомендованных фильмов для пользователя
+      operationId: getRecommendation
+      description: Возвращает персонализированный список идентификаторов фильмов для конкретного пользователя.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Уникальный идентификатор пользователя
+          schema:
+            type: integer
+            format: int64
+          example: 42
+        - name: limit
+          in: query
+          required: false
+          description: Максимальное количество фильмов в списке рекомендаций
+          schema:
+            type: integer
+            format: int32
+            default: 10
+            minimum: 1
+      responses:
+        200:
+          description: Успешный ответ с идентификаторами фильмов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                  format: int64
+        400:
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /video/{mediaId}:
+    get:
+      tags:
+        - video
+      summary: Получить ссылку для воспроизведения видео
+      operationId: getVideo
+      description: Возвращает ссылку на поток для воспроизведения фильма по уникальному идентификатору видео.
+      parameters:
+        - name: mediaId
+          in: path
+          required: true
+          description: Уникальный идентификатор видеофайла в системе CDN
+          schema:
+            type: string
+          example: "64dbefc9b1e2f9a0a6123456"
+      responses:
+        200:
+          description: Успешный ответ с ссылкой на поток
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  streamUrl:
+                    type: string
+                    description: URL для воспроизведения видео
+                    example: 'https://cdn.example.com/streams/64dbefc9b1e2f9a0a6123456/playlist.m3u8'
+        404:
+          description: Видео с указанным mediaId не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    SignUpRq:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: 'user@example.com'
+          description: Электронная почта пользователя
+        password:
+          type: string
+          format: password
+          example: 'StrongPassword123!'
+          description: |
+            Пароль пользователя. 
+            Должен содержать минимум 8 символов, включая:
+            - одну букву в нижнем или верхнем регистре,
+            - одну цифру,
+            - один специальный символ.
+          pattern: '^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
+    SignUpRs:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Успешная регистрация. Сообщение с подтверждение выслано на указанный адрес электронной почты'
+    SignInRq:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: 'user@example.com'
+          description: Электронная почта пользователя
+        password:
+          type: string
+          format: password
+          example: 'StrongPassword123!'
+          description: Пароль пользователя
+    SignInRs:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: Токен доступа
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+        refreshToken:
+          type: string
+          description: Рефреш токен
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+    LogoutRs:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Сообщение об успешном выходе из системы
+          example: 'Успешный выход из системы'
+    ResetPasswordRq:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Электронная почта пользователя
+          example: 'user@example.com'
+    ResetPasswordRs:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Сообщение об отправке ссылки для сброса пароля на электронную почту
+          example: 'Сообщение со ссылкой для сброса пароля отправлено на электронную почту'
+    ProfileRq:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: Имя пользователя
+          example: 'Иван'
+        lastName:
+          type: string
+          description: Фамилия пользователя
+          example: 'Иванов'
+        birthDate:
+          type: string
+          format: date
+          description: Дата рождения
+          example: '1990-05-15'
+        gender:
+          type: string
+          enum: [ male, female, other ]
+          description: Пол
+          example: 'male'
+        avatarUrl:
+          type: string
+          description: Ссылка на аватар
+          example: 'https://example.com/avatar.jpg'
+    ProfileRs:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор пользователя
+          example: 13
+        firstName:
+          type: string
+          description: Имя пользователя
+          example: 'Иван'
+        lastName:
+          type: string
+          description: Фамилия пользователя
+          example: 'Иванов'
+        birthDate:
+          type: string
+          format: date
+          description: Дата рождения
+          example: '1990-05-15'
+        gender:
+          type: string
+          description: Пол
+          example: 'male'
+        avatarUrl:
+          type: string
+          description: Ссылка на аватар
+          example: 'https://example.com/avatar.jpg'
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата и время создания профиля
+          example: '2024-11-23T12:34:56Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата и время последнего обновления профиля
+          example: '2024-11-24T08:15:30Z'
+    HistoryRs:
+      type: object
+      properties:
+        action:
+          type: string
+          description: Действие пользователя (например, просмотр фильма, добавление в избранное)
+          example: "viewed_movie"
+        timestamp:
+          type: string
+          format: date-time
+          description: Время, когда было совершено действие
+          example: "2024-11-24T10:15:30Z"
+        details:
+          type: string
+          description: Дополнительные сведения о действии (например, идентификатор фильма или комментарий)
+          example: "Просмотр фильма с ID: 67890"
+    FilmRs:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор фильма
+          example: 1
+        title:
+          type: string
+          description: Название фильма
+          example: "The Matrix"
+        description:
+          type: string
+          description: Описание фильма
+          example: "A hacker discovers a shocking reality."
+        releaseDate:
+          type: string
+          format: date
+          description: Дата выхода фильма
+          example: "1999-03-31"
+        rating:
+          type: number
+          format: float
+          description: Рейтинг фильма
+          example: 9.0
+        genres:
+          type: array
+          description: Жанры фильма
+          items:
+            $ref: '#/components/schemas/Genre'
+        posterId:
+          type: string
+          description: Идентификатор постера фильма в медиабазе данных
+          example: "647e3a81f5d3ec7e2b76c9d1"
+        mediaId:
+          type: string
+          description: Идентификатор видеофайла в медиабазе данных для видеоплеера
+          example: "647e3a81f5d3ec7e2b76c9d1"
+    FilmRq:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Название фильма
+          example: "The Matrix Reloaded"
+        description:
+          type: string
+          description: Описание фильма
+          example: "The second part of the sci-fi trilogy."
+        releaseDate:
+          type: string
+          format: date
+          description: Дата выхода фильма
+          example: "2003-05-15"
+        rating:
+          type: number
+          format: float
+          description: Рейтинг фильма
+          example: 8.0
+        genreIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          description: Идентификаторы жанров фильма
+          example: [ 1, 2 ]
+        posterId:
+          type: string
+          description: Идентификатор постера фильма в медиабазе данных
+          example: "648f7e8af1a3bc8e1c33b8a4"
+        mediaId:
+          type: string
+          description: Идентификатор видеофайла в медиабазе данных для видеоплеера
+          example: "648f7e8af1a3bc8e1c33b8a4"
+    Genre:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор жанра
+          example: 1
+        name:
+          type: string
+          description: Название жанра
+          example: "Sci-Fi"
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: Числовой код ошибки, указывающий тип ошибки.
+          example: 500
+        message:
+          type: string
+          description: Читабельное сообщение с описанием ошибки.
+          example: Сообщение об ошибке
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
